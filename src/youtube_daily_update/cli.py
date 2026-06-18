@@ -77,6 +77,10 @@ def _build_providers(provider: str, dry_run: bool) -> DailyUpdateProviders:
         llm=GeminiProvider(
             os.environ.get("GEMINI_API_KEY", ""),
             model=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),
+            fallback_models=_csv_env(
+                "GEMINI_FALLBACK_MODELS",
+                ("gemini-2.5-flash", "gemini-2.5-flash-lite"),
+            ),
         ),
         notifier=FakeNotifier() if dry_run else TelegramNotifier(
             os.environ.get("TELEGRAM_BOT_TOKEN", ""),
@@ -98,6 +102,14 @@ def _override_settings(settings: AppSettings, args: argparse.Namespace) -> AppSe
 def _require_env(name: str) -> None:
     if not os.environ.get(name):
         raise RuntimeError(f"Missing required environment variable: {name}")
+
+
+def _csv_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    value = os.environ.get(name)
+    if not value:
+        return default
+    parsed = tuple(part.strip() for part in value.split(",") if part.strip())
+    return parsed or default
 
 
 def _parse_now(value: str | None) -> datetime | None:

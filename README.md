@@ -10,6 +10,7 @@ Current implementation target:
 - Gemini API Free Tier for summaries.
 - Telegram Bot API for notifications.
 - `state/seen_videos.sqlite` for duplicate prevention.
+- Gemini retries transient `429` and `5xx` errors, then falls back to `gemini-2.5-flash` and `gemini-2.5-flash-lite`.
 
 ## Setup
 
@@ -66,3 +67,4 @@ PYTHONPATH=src python -m youtube_daily_update
 - No full transcript or full summary is stored in SQLite.
 - If subtitles are unavailable, summaries fall back to title and description and must be marked low confidence.
 - The default Gemini model is `gemini-3.5-flash`; override it with `GEMINI_MODEL`.
+- Override fallback models with `GEMINI_FALLBACK_MODELS`, using a comma-separated list.

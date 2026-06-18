@@ -125,7 +125,7 @@ class DailyUpdater:
             summary = self.providers.llm.generate(prompt).strip()
         except Exception as exc:  # noqa: BLE001
             stats.add_failure(f"Gemini failed for {video.video_id}: {exc}")
-            LOGGER.exception("llm_failed", extra={"video_id": video.video_id})
+            LOGGER.warning("llm_failed for %s: %s", video.video_id, exc)
             return None
 
         problems = validate_summary(summary, transcript.source, low_confidence)
