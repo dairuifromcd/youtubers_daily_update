@@ -42,7 +42,6 @@ class FakeLLMProvider:
     def __init__(self, summaries: dict[str, str] | None = None, default_summary: str | None = None):
         self.summaries = summaries or {}
         self.default_summary = default_summary or (
-            "摘要依据：字幕\n"
             "- 这个视频介绍了主要更新。\n"
             "- 内容包含几个值得关注的重点。\n"
             "- 适合想快速了解主题的观众。"
