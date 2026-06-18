@@ -15,3 +15,15 @@ channels:
   - name: 尼可拉斯楊Live精
     url: https://www.youtube.com/@nicolasyounglive
     enabled: true
+
+  - name: 老房叨叨叨
+    url: https://www.youtube.com/@laofangDDD
+    enabled: true
+
+  - name: 最佳拍档
+    url: https://www.youtube.com/@bestpartners
+    enabled: true
+
+  - name: 美投侃新闻
+    url: https://www.youtube.com/@MeiTouNews
+    enabled: true
