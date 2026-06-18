@@ -1,0 +1,17 @@
+settings:
+  state_path: state/seen_videos.sqlite
+  max_videos_per_channel: 10
+  max_videos_per_run: 20
+  max_transcript_chars: 50000
+  preferred_subtitle_languages:
+    - zh.*
+    - en.*
+
+channels:
+  - name: 老范讲故事
+    url: https://www.youtube.com/@StorytellerFan
+    enabled: true
+
+  - name: 尼可拉斯楊Live精
+    url: https://www.youtube.com/@nicolasyounglive
+    enabled: true
