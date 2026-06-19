@@ -4,7 +4,8 @@ Daily YouTube channel monitor that summarizes new videos in Simplified Chinese a
 
 Current implementation target:
 
-- GitHub Actions at `5 2 * * *` UTC, equal to 12:05 in Australia/Brisbane.
+- GitHub Actions at staggered times near noon in Australia/Brisbane:
+  `7 2 * * *`, `37 2 * * *`, and `7 3 * * *` UTC.
 - YouTube Data API for video discovery.
 - yt-dlp for public subtitles or automatic subtitles.
 - Gemini API Free Tier for summaries.
