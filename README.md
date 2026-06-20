@@ -69,3 +69,5 @@ PYTHONPATH=src python -m youtube_daily_update
 - If subtitles are unavailable, summaries fall back to title and description and must be marked low confidence.
 - The default Gemini model is `gemini-3.5-flash`; override it with `GEMINI_MODEL`.
 - Override fallback models with `GEMINI_FALLBACK_MODELS`, using a comma-separated list.
+- GitHub schedules are best-effort. If a new repository produces no `schedule` events,
+  push a normal-file commit after the workflow commit to force GitHub to resync it.
