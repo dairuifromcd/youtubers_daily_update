@@ -2,11 +2,8 @@ name: Daily YouTube Update
 
 on:
   schedule:
-    # Australia/Brisbane is UTC+10. Multiple staggered schedules reduce the
-    # chance that GitHub Actions drops a single scheduled run during peak load.
-    - cron: "7 2 * * *"
-    - cron: "37 2 * * *"
-    - cron: "7 3 * * *"
+    - cron: "5 12 * * *"
+      timezone: "Australia/Brisbane"
   workflow_dispatch:
 
 permissions:
