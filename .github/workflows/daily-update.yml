@@ -2,8 +2,9 @@ name: Daily YouTube Update
 
 on:
   schedule:
-    - cron: "5 12 * * *"
-      timezone: "Australia/Brisbane"
+    # GitHub schedules are evaluated in UTC. Australia/Brisbane is UTC+10
+    # year-round, so 02:05 UTC is 12:05 in Brisbane.
+    - cron: "5 2 * * *"
   workflow_dispatch:
 
 permissions:

@@ -4,7 +4,7 @@ Daily YouTube channel monitor that summarizes new videos in Simplified Chinese a
 
 Current implementation target:
 
-- GitHub Actions daily at 12:05 in Australia/Brisbane.
+- GitHub Actions daily at 12:05 in Australia/Brisbane, expressed as `02:05 UTC` in cron.
 - YouTube Data API for video discovery.
 - yt-dlp for public subtitles or automatic subtitles.
 - Gemini API Free Tier for summaries.
