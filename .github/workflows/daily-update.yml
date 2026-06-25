@@ -2,9 +2,9 @@ name: Daily YouTube Update
 
 on:
   schedule:
-    # GitHub schedules are evaluated in UTC. Australia/Brisbane is UTC+10
-    # year-round, so 02:05 UTC is 12:05 in Brisbane.
-    - cron: "5 2 * * *"
+    # GitHub schedules can be delayed by hours. Trigger early, then wait inside
+    # the runner until 12:05 in Brisbane before doing the real work.
+    - cron: "5 21 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,20 @@ jobs:
     if: github.event_name != 'pull_request'
 
     steps:
+      - name: Wait until Brisbane noon
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          target_epoch="$(TZ=Australia/Brisbane date -d 'today 12:05' +%s)"
+          now_epoch="$(date +%s)"
+          if [ "$now_epoch" -lt "$target_epoch" ]; then
+            sleep_seconds=$((target_epoch - now_epoch))
+            echo "Waiting ${sleep_seconds}s until 12:05 Australia/Brisbane."
+            sleep "$sleep_seconds"
+          else
+            echo "12:05 Australia/Brisbane has already passed; running immediately."
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 

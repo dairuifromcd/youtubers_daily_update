@@ -4,7 +4,7 @@ Daily YouTube channel monitor that summarizes new videos in Simplified Chinese a
 
 Current implementation target:
 
-- GitHub Actions daily at 12:05 in Australia/Brisbane, expressed as `02:05 UTC` in cron.
+- GitHub Actions scheduled early each day, then waits in the runner until 12:05 in Australia/Brisbane before checking YouTube.
 - YouTube Data API for video discovery.
 - yt-dlp for public subtitles or automatic subtitles.
 - Gemini API Free Tier for summaries.
@@ -68,3 +68,4 @@ PYTHONPATH=src python -m youtube_daily_update
 - If subtitles are unavailable, summaries fall back to title and description and must be marked low confidence.
 - The default Gemini model is `gemini-3.5-flash`; override it with `GEMINI_MODEL`.
 - Override fallback models with `GEMINI_FALLBACK_MODELS`, using a comma-separated list.
+- GitHub scheduled workflows can start hours late. The workflow is intentionally triggered at `21:05 UTC` and waits until `12:05 Australia/Brisbane` before doing the real work.
