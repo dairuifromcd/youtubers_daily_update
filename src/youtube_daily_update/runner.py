@@ -8,7 +8,6 @@ from datetime import datetime
 from .messages import (
     build_summary_prompt,
     format_digest_messages,
-    metadata_transcript,
     validate_summary,
 )
 from .models import AppSettings, ChannelConfig, RunStats, TranscriptResult, VideoDigest
@@ -109,12 +108,17 @@ class DailyUpdater:
                 video, self.settings.preferred_subtitle_languages
             )
         except Exception as exc:  # noqa: BLE001
-            stats.add_failure(f"Transcript failed for {video.video_id}: {exc}")
             LOGGER.warning("transcript_failed", exc_info=True, extra={"video_id": video.video_id})
             transcript = None
 
-        if transcript is None or not transcript.text.strip():
-            transcript = metadata_transcript(video)
+        video_url = None
+        if (transcript is None or not transcript.text.strip()
+                or len(transcript.text) > self.settings.max_transcript_chars):
+            # Use the whole video rather than metadata or a truncated transcript.
+            video_url = video.url
+            transcript = TranscriptResult("", source="视频内容（Gemini直接读取）")
+        LOGGER.info("summary_input video_id=%s source=%s chars=%s",
+                    video.video_id, transcript.source, len(transcript.text))
 
         low_confidence = transcript.source == "标题和简介"
         prompt = build_summary_prompt(
@@ -122,7 +126,7 @@ class DailyUpdater:
         )
 
         try:
-            summary = self.providers.llm.generate(prompt).strip()
+            summary = self.providers.llm.generate(prompt, video_url=video_url).strip()
         except Exception as exc:  # noqa: BLE001
             stats.add_failure(f"Gemini failed for {video.video_id}: {exc}")
             LOGGER.warning("llm_failed for %s: %s", video.video_id, exc)
@@ -135,6 +139,7 @@ class DailyUpdater:
                 "summary_quality_warning",
                 extra={"video_id": video.video_id, "problems": ",".join(problems)},
             )
+            return None
 
         return VideoDigest(
             video=video,

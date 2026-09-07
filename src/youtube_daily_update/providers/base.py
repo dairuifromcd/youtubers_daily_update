@@ -27,7 +27,7 @@ class TranscriptProvider(Protocol):
 
 
 class LLMProvider(Protocol):
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, video_url: str | None = None) -> str:
         ...
 
 

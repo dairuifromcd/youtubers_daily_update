@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .base import ProviderError
+
+LOGGER = logging.getLogger(__name__)
 
 
 class GeminiProviderError(ProviderError):
@@ -33,8 +36,8 @@ class GeminiProvider:
         api_key: str,
         model: str = "gemini-3.5-flash",
         fallback_models: tuple[str, ...] = ("gemini-2.5-flash", "gemini-2.5-flash-lite"),
-        timeout_seconds: int = 60,
-        max_output_tokens: int = 1200,
+        timeout_seconds: int = 180,
+        max_output_tokens: int = 8192,
         max_attempts: int = 3,
         initial_backoff_seconds: float = 2.0,
         sleep_fn: Callable[[float], None] = time.sleep,
@@ -50,11 +53,13 @@ class GeminiProvider:
         self.initial_backoff_seconds = initial_backoff_seconds
         self.sleep_fn = sleep_fn
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, video_url: str | None = None) -> str:
         errors: list[str] = []
         for model in self._models_to_try():
             for attempt in range(1, self.max_attempts + 1):
                 try:
+                    if video_url is not None:
+                        return self._generate_with_model(model, prompt, video_url=video_url)
                     return self._generate_with_model(model, prompt)
                 except GeminiProviderError as exc:
                     errors.append(f"{model} attempt {attempt}: {exc}")
@@ -75,10 +80,13 @@ class GeminiProvider:
                 models.append(clean)
         return tuple(models)
 
-    def _generate_with_model(self, model: str, prompt: str) -> str:
+    def _generate_with_model(self, model: str, prompt: str, *, video_url: str | None = None) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        parts = [{"text": prompt}]
+        if video_url is not None:
+            parts.insert(0, {"fileData": {"fileUri": video_url, "mimeType": "video/mp4"}})
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": parts}],
             "generationConfig": {
                 "temperature": 0.2,
                 "maxOutputTokens": self.max_output_tokens,
@@ -107,10 +115,22 @@ class GeminiProvider:
         except URLError as exc:
             raise GeminiProviderError(f"Gemini API network error: {exc}") from exc
 
-        try:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except (KeyError, IndexError) as exc:
-            raise ProviderError(f"Gemini API returned no text: {json.dumps(data)[:300]}") from exc
+        candidates = data.get("candidates") or []
+        candidate = candidates[0] if candidates else {}
+        finish_reason = candidate.get("finishReason")
+        LOGGER.info("gemini_result model=%s finish_reason=%s usage=%s",
+                    data.get("modelVersion", model), finish_reason,
+                    json.dumps(data.get("usageMetadata", {})))
+        # Fail closed: never publish partial text or spend further requests trying
+        # other models when generation was truncated or blocked.
+        if finish_reason != "STOP":
+            raise ProviderError(f"Gemini incomplete response: finishReason={finish_reason}")
+        parts = (candidate.get("content") or {}).get("parts") or []
+        text = "\n".join(part["text"] for part in parts
+                         if isinstance(part.get("text"), str) and not part.get("thought")).strip()
+        if not text:
+            raise ProviderError("Gemini API returned no answer text")
+        return text
 
     def _delay_seconds(self, attempt: int, exc: GeminiProviderError) -> float:
         if exc.retry_after_seconds is not None:

@@ -47,9 +47,11 @@ class FakeLLMProvider:
             "- 适合想快速了解主题的观众。"
         )
         self.prompts: list[str] = []
+        self.video_urls: list[str | None] = []
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, video_url: str | None = None) -> str:
         self.prompts.append(prompt)
+        self.video_urls.append(video_url)
         for key, summary in self.summaries.items():
             if key in prompt:
                 return summary

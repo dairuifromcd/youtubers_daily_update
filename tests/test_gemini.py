@@ -1,4 +1,7 @@
 import unittest
+import io
+import json
+from unittest.mock import patch
 
 from youtube_daily_update.providers.base import ProviderError
 from youtube_daily_update.providers.gemini import GeminiProvider, GeminiProviderError
@@ -29,6 +32,33 @@ class StubGeminiProvider(GeminiProvider):
 
 
 class GeminiProviderTests(unittest.TestCase):
+    def test_video_payload_and_answer_parts(self):
+        data = {"candidates": [{"finishReason": "STOP", "content": {"parts": [
+            {"text": "private reasoning", "thought": True},
+            {"text": "中文主旨"}, {"text": "详细要点"},
+        ]}}]}
+        with patch("youtube_daily_update.providers.gemini.urlopen",
+                   return_value=io.BytesIO(json.dumps(data).encode())) as request:
+            result = GeminiProvider("test-key").generate("总结", video_url="https://www.youtube.com/watch?v=TI-Qa30nyjY")
+        payload = json.loads(request.call_args.args[0].data)
+        self.assertEqual("中文主旨\n详细要点", result)
+        self.assertEqual(8192, payload["generationConfig"]["maxOutputTokens"])
+        self.assertEqual("video/mp4", payload["contents"][0]["parts"][0]["fileData"]["mimeType"])
+
+    def test_incomplete_or_empty_response_is_not_retried_or_returned(self):
+        for reason, parts in [("MAX_TOKENS", [{"text": "partial"}]),
+                              ("SAFETY", [{"text": "partial"}]),
+                              (None, [{"text": "partial"}]),
+                              ("STOP", [{"text": "thinking", "thought": True}]),
+                              ("STOP", [])]:
+            with self.subTest(reason=reason, parts=parts):
+                data = {"candidates": [{"finishReason": reason, "content": {"parts": parts}}]}
+                with patch("youtube_daily_update.providers.gemini.urlopen",
+                           return_value=io.BytesIO(json.dumps(data).encode())) as request:
+                    with self.assertRaises(ProviderError):
+                        GeminiProvider("test-key").generate("总结")
+                    self.assertEqual(1, request.call_count)
+
     def test_retries_transient_503(self):
         provider = StubGeminiProvider(failures_before_success=1)
 

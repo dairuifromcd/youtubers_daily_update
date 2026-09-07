@@ -3,9 +3,11 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import Mock
 import unittest
 
-from youtube_daily_update.models import AppSettings, ChannelConfig, TranscriptResult, Video
+from youtube_daily_update.models import AppSettings, ChannelConfig, TranscriptResult, Video, RunStats
+from youtube_daily_update.providers.base import ProviderError
 from youtube_daily_update.providers.fake import (
     FakeLLMProvider,
     FakeNotifier,
@@ -29,6 +31,52 @@ def sample_video() -> Video:
 
 
 class RunnerTests(unittest.TestCase):
+    def test_input_routing_uses_video_for_missing_failed_or_oversized_subtitles(self):
+        cases = [(None, True), (TranscriptResult("  ", "字幕"), True),
+                 (TranscriptResult("长" * 101, "字幕"), True),
+                 (TranscriptResult("完整字幕", "字幕"), False),
+                 (RuntimeError("subtitle unavailable"), True)]
+        for transcript, use_video in cases:
+            with self.subTest(transcript=transcript):
+                fetcher = Mock()
+                if isinstance(transcript, Exception):
+                    fetcher.fetch.side_effect = transcript
+                else:
+                    fetcher.fetch.return_value = transcript
+                llm = FakeLLMProvider()
+                providers = DailyUpdateProviders(FakeYouTubeProvider(), fetcher, llm, FakeNotifier())
+                with TemporaryDirectory() as tmp:
+                    store = SeenVideoStore(Path(tmp) / "seen.sqlite")
+                    stats = RunStats()
+                    result = DailyUpdater(providers, store, AppSettings(max_transcript_chars=100))._process_video(sample_video(), stats)
+                    store.close()
+                self.assertEqual([sample_video().url if use_video else None], llm.video_urls)
+                self.assertEqual("视频内容（Gemini直接读取）" if use_video else "字幕", result.basis)
+                self.assertFalse(result.low_confidence)
+                self.assertEqual([], stats.failures)
+
+    def test_rejected_summary_is_not_sent_or_marked_seen(self):
+        for failure in (ProviderError("finishReason=MAX_TOKENS"), "   "):
+            with self.subTest(failure=failure):
+                llm = Mock()
+                if isinstance(failure, Exception):
+                    llm.generate.side_effect = failure
+                else:
+                    llm.generate.return_value = failure
+                notifier = FakeNotifier()
+                providers = DailyUpdateProviders(FakeYouTubeProvider({"UC1": [sample_video()]}),
+                                                 FakeTranscriptProvider(), llm, notifier)
+                with TemporaryDirectory() as tmp:
+                    store = SeenVideoStore(Path(tmp) / "seen.sqlite")
+                    result = DailyUpdater(providers, store, AppSettings()).run(
+                        [ChannelConfig(name="Channel", channel_id="UC1")],
+                        now=datetime(2026, 6, 18, 2, 5, tzinfo=timezone.utc))
+                    self.assertFalse(store.is_notified("vid1"))
+                    store.close()
+                self.assertEqual([], result.digests)
+                self.assertEqual(0, result.stats.summaries_created)
+                self.assertTrue(all("Interesting Update" not in m for m in notifier.messages))
+
     def test_full_fake_run_marks_notified_and_avoids_duplicates(self):
         video = sample_video()
         youtube = FakeYouTubeProvider({"UC1": [video]})

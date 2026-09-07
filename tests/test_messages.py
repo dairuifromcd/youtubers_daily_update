@@ -24,6 +24,10 @@ def sample_video() -> Video:
 
 
 class MessageTests(unittest.TestCase):
+    def test_oversized_transcript_is_not_silently_truncated(self):
+        with self.assertRaises(ValueError):
+            build_summary_prompt(sample_video(), TranscriptResult("正文" * 100, "字幕"), 10)
+
     def test_prompt_contains_simplified_chinese_and_no_fabrication_rules(self):
         prompt = build_summary_prompt(sample_video(), TranscriptResult("hello", "字幕"), 1000)
 

@@ -48,10 +48,17 @@ class YtDlpTranscriptProvider:
             )
             if completed.returncode != 0:
                 return None
+            def preference(path: Path) -> int:
+                language = path.name.split(".", 1)[1].removesuffix(".vtt")
+                return next((i for i, pattern in enumerate(languages.split(","))
+                             if re.fullmatch(pattern, language)), len(languages.split(",")))
+
             files = sorted(Path(tmp).glob("*.vtt"))
-            if not files:
-                return None
-            return _clean_vtt(files[0].read_text(encoding="utf-8", errors="replace"))
+            for path in sorted(files, key=preference):
+                cleaned = _clean_vtt(path.read_text(encoding="utf-8", errors="replace"))
+                if cleaned:
+                    return cleaned
+            return None
 
 
 def _clean_vtt(text: str) -> str:
@@ -60,14 +67,15 @@ def _clean_vtt(text: str) -> str:
     skip_block = False
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line or line == "WEBVTT":
+        if not line:
+            skip_block = False
+            continue
+        if line.startswith(("WEBVTT", "Kind:", "Language:")):
             continue
         if line.startswith(("NOTE", "STYLE", "REGION")):
             skip_block = True
             continue
         if skip_block:
-            if not line:
-                skip_block = False
             continue
         if "-->" in line:
             continue
