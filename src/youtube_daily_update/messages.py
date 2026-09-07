@@ -80,10 +80,16 @@ def format_digest_messages(digests: list[VideoDigest], failure_count: int = 0) -
     if not digests and failure_count == 0:
         return []
 
-    entries = [_format_entry(index + 1, digest) for index, digest in enumerate(digests)]
+    messages: list[str] = []
+    for index, digest in enumerate(digests, start=1):
+        header = f"YouTube 今日更新\n链接：{digest.video.url}\n\n"
+        entry = _format_entry(index, digest)
+        entry = entry.replace(f"链接：{digest.video.url}\n", "", 1)
+        chunks = _split_long_text(entry, SAFE_TELEGRAM_MAX_CHARS - len(header))
+        messages.extend(header + chunk for chunk in chunks)
     if failure_count:
-        entries.append(f"本次运行有 {failure_count} 个项目处理失败，详情见 GitHub Actions 日志。")
-    return split_telegram_messages(entries)
+        messages.append(f"本次运行有 {failure_count} 个项目处理失败，详情见 GitHub Actions 日志。")
+    return messages
 
 
 def split_telegram_messages(entries: list[str], max_chars: int = SAFE_TELEGRAM_MAX_CHARS) -> list[str]:

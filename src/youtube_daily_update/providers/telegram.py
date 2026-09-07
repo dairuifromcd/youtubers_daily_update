@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -46,8 +47,13 @@ class TelegramNotifier:
         payload = {
             "chat_id": self.chat_id,
             "text": message,
-            "disable_web_page_preview": False,
         }
+        video_link = re.search(r"^链接：(https://www\.youtube\.com/watch\?v=[\w-]+)$", message, re.MULTILINE)
+        payload["link_preview_options"] = (
+            {"is_disabled": False, "url": video_link.group(1),
+             "prefer_large_media": True, "show_above_text": True}
+            if video_link else {"is_disabled": True}
+        )
         request = Request(
             url,
             data=json.dumps(payload).encode("utf-8"),

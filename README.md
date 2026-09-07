@@ -64,6 +64,7 @@ PYTHONPATH=src python -m youtube_daily_update
 
 ## Notes
 
+- Each video is sent in a separate Telegram message with its own explicitly selected large YouTube link preview above the text. Long summaries are split with the video link retained on each part; failure notices are separate. Preview availability is controlled by Telegram/YouTube. This does not add Gemini calls.
 - No full transcript or full summary is stored in SQLite.
 - Complete subtitles are preferred. If extraction fails, returns empty text, or exceeds `max_transcript_chars`, Gemini receives the YouTube video URL as native video input instead of title/description or a truncated transcript. The digest identifies its actual source.
 - Summaries target 1,000–1,500 Chinese characters (shorter for simple videos), with a main idea and 4–7 themed points preserving evidence, key numbers, chronology and the author's qualifications. Promotions and repetitive details are omitted. Length is a prompt target, not a hard text cutoff.

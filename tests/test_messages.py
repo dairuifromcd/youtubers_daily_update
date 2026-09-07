@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 import unittest
 
 from youtube_daily_update.messages import (
@@ -24,6 +25,26 @@ def sample_video() -> Video:
 
 
 class MessageTests(unittest.TestCase):
+    def test_each_video_has_its_own_message_and_link(self):
+        first = sample_video()
+        second = replace(first, video_id="vid2", url="https://www.youtube.com/watch?v=vid2")
+        digests = [VideoDigest(video=v, summary="- 中文摘要", basis="字幕", low_confidence=False)
+                   for v in (first, second)]
+        messages = format_digest_messages(digests, failure_count=1)
+        self.assertEqual(3, len(messages))
+        for i, video in enumerate((first, second)):
+            self.assertEqual(1, messages[i].count(video.url))
+            self.assertNotIn(digests[1-i].video.url, messages[i])
+        self.assertNotIn("https://", messages[-1])
+
+    def test_long_video_summary_keeps_link_on_every_part(self):
+        video = sample_video()
+        digest = VideoDigest(video, "一" * 9000, "字幕", False)
+        messages = format_digest_messages([digest])
+        self.assertGreater(len(messages), 1)
+        self.assertTrue(all(len(m) <= 3900 and video.url in m for m in messages))
+        self.assertEqual(9000, sum(m.count("一") for m in messages))
+
     def test_oversized_transcript_is_not_silently_truncated(self):
         with self.assertRaises(ValueError):
             build_summary_prompt(sample_video(), TranscriptResult("正文" * 100, "字幕"), 10)
