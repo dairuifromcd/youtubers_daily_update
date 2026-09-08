@@ -63,6 +63,7 @@ def _parse_settings(raw: Any) -> AppSettings:
         state_path=str(raw.get("state_path", "state/seen_videos.sqlite")),
         max_videos_per_channel=int(raw.get("max_videos_per_channel", 10)),
         max_videos_per_run=int(raw.get("max_videos_per_run", 20)),
+        short_video_max_seconds=max(0, int(raw.get("short_video_max_seconds", 180))),
         max_transcript_chars=int(raw.get("max_transcript_chars", 50000)),
         preferred_subtitle_languages=languages or ("zh.*", "en.*"),
     )

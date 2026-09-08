@@ -96,6 +96,7 @@ def _override_settings(settings: AppSettings, args: argparse.Namespace) -> AppSe
         max_videos_per_run=args.max_videos_per_run or settings.max_videos_per_run,
         max_transcript_chars=args.max_transcript_chars or settings.max_transcript_chars,
         preferred_subtitle_languages=settings.preferred_subtitle_languages,
+        short_video_max_seconds=settings.short_video_max_seconds,
     )
 
 

@@ -112,6 +112,8 @@ class GeminiProvider:
                 status_code=exc.code,
                 retry_after_seconds=retry_after,
             ) from exc
+        except TimeoutError as exc:
+            raise GeminiProviderError("Gemini API read/connect timeout") from exc
         except URLError as exc:
             raise GeminiProviderError(f"Gemini API network error: {exc}") from exc
 

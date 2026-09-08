@@ -35,6 +35,7 @@ class AppSettings:
     state_path: str = "state/seen_videos.sqlite"
     max_videos_per_channel: int = 10
     max_videos_per_run: int = 20
+    short_video_max_seconds: int = 180
     max_transcript_chars: int = 50000
     preferred_subtitle_languages: tuple[str, ...] = ("zh.*", "en.*")
 
@@ -48,6 +49,7 @@ class Video:
     url: str
     published_at: datetime
     description: str = ""
+    duration_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,7 @@ class RunStats:
     channels_checked: int = 0
     videos_found: int = 0
     videos_skipped_seen: int = 0
+    videos_skipped_short: int = 0
     summaries_created: int = 0
     messages_sent: int = 0
     videos_marked_notified: int = 0
@@ -84,6 +87,7 @@ class RunStats:
             "channels_checked": self.channels_checked,
             "videos_found": self.videos_found,
             "videos_skipped_seen": self.videos_skipped_seen,
+            "videos_skipped_short": self.videos_skipped_short,
             "summaries_created": self.summaries_created,
             "messages_sent": self.messages_sent,
             "videos_marked_notified": self.videos_marked_notified,

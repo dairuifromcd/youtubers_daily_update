@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -76,6 +77,24 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual([], result.digests)
                 self.assertEqual(0, result.stats.summaries_created)
                 self.assertTrue(all("Interesting Update" not in m for m in notifier.messages))
+
+    def test_short_videos_are_filtered_before_transcription_and_generation(self):
+        for seconds, skipped in [(30, True), (180, True), (181, False), (None, False)]:
+            with self.subTest(seconds=seconds), TemporaryDirectory() as tmp:
+                video = replace(sample_video(), duration_seconds=seconds)
+                transcript = Mock()
+                transcript.fetch.return_value = TranscriptResult("字幕", "字幕")
+                llm = FakeLLMProvider()
+                providers = DailyUpdateProviders(FakeYouTubeProvider({"UC1": [video]}), transcript, llm, FakeNotifier())
+                store = SeenVideoStore(Path(tmp) / "seen.sqlite")
+                result = DailyUpdater(providers, store, AppSettings()).run(
+                    [ChannelConfig(name="Channel", channel_id="UC1")],
+                    now=datetime(2026, 6, 18, 2, 5, tzinfo=timezone.utc))
+                self.assertEqual(int(skipped), result.stats.videos_skipped_short)
+                self.assertEqual(int(not skipped), transcript.fetch.call_count)
+                self.assertEqual(int(not skipped), len(llm.prompts))
+                self.assertEqual(not skipped, store.is_notified("vid1"))
+                store.close()
 
     def test_full_fake_run_marks_notified_and_avoids_duplicates(self):
         video = sample_video()

@@ -74,3 +74,11 @@ PYTHONPATH=src python -m youtube_daily_update
 - The default Gemini model is `gemini-3.5-flash`; override it with `GEMINI_MODEL`.
 - Override fallback models with `GEMINI_FALLBACK_MODELS`, using a comma-separated list.
 - GitHub scheduled workflows can start hours late. The workflow is intentionally triggered at `21:05 UTC` and waits until `12:05 Australia/Brisbane` before doing the real work.
+
+### 摘要与短视频过滤
+
+每个视频保留一个主旨和 3–5 条核心要点，目标约 600–900 字（简单内容更短），并单独显示封面。发送前清理重复的通用“主题：”标签和完全相同的段落。
+
+`settings.short_video_max_seconds` 默认 180：根据 YouTube API 时长跳过不超过 3 分钟的视频，在字幕抓取及 Gemini 调用之前过滤，不占模型调用次数。设为 0 可关闭。此规则按时长过滤，也会排除短横屏视频；时长未知的视频继续正常处理。
+
+Gemini 连接或读取超时会进入已有的有限重试与备用模型流程；重试可能额外消耗模型配额，仍失败时会报告失败，不发布不完整摘要。

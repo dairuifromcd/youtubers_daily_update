@@ -71,6 +71,13 @@ class DailyUpdater:
                 if len(digests) >= self.settings.max_videos_per_run:
                     break
                 stats.videos_found += 1
+                if (self.settings.short_video_max_seconds > 0
+                        and video.duration_seconds is not None
+                        and video.duration_seconds <= self.settings.short_video_max_seconds):
+                    stats.videos_skipped_short += 1
+                    LOGGER.info("short_video_skipped video_id=%s duration_seconds=%s",
+                                video.video_id, video.duration_seconds)
+                    continue
                 if self.store.is_notified(video.video_id):
                     stats.videos_skipped_seen += 1
                     continue

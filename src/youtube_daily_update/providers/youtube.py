@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -49,7 +50,8 @@ class YouTubeDataApiProvider:
 
         videos: list[Video] = []
         for video_id in video_ids:
-            snippet = details.get(video_id)
+            detail = details.get(video_id, {})
+            snippet = detail.get("snippet")
             if not snippet:
                 continue
             published_at = parse_rfc3339(snippet["publishedAt"])
@@ -64,6 +66,9 @@ class YouTubeDataApiProvider:
                     url=f"https://www.youtube.com/watch?v={video_id}",
                     published_at=published_at,
                     description=snippet.get("description", ""),
+                    duration_seconds=_parse_duration_seconds(
+                        detail.get("contentDetails", {}).get("duration", "")
+                    ),
                 )
             )
         return videos
@@ -123,9 +128,9 @@ class YouTubeDataApiProvider:
             return {}
         data = self._request(
             "videos",
-            {"part": "snippet", "id": ",".join(video_ids[:50])},
+            {"part": "snippet,contentDetails", "id": ",".join(video_ids[:50])},
         )
-        return {item["id"]: item["snippet"] for item in data.get("items", [])}
+        return {item["id"]: item for item in data.get("items", [])}
 
     def _request(self, resource: str, params: dict[str, object]) -> dict:
         query = urlencode({**params, "key": self.api_key})
@@ -168,3 +173,11 @@ def _extract_handle(value: str) -> str | None:
     if parts[0] in {"c", "user"} and len(parts) >= 2:
         return parts[1]
     return None
+
+
+def _parse_duration_seconds(value: str) -> float | None:
+    """Parse the day/time ISO 8601 durations returned by YouTube."""
+    match = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?", value)
+    if not match or not any(match.groups()):
+        return None
+    return sum(float(part or 0) * scale for part, scale in zip(match.groups(), (86400, 3600, 60, 1)))

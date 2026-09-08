@@ -98,3 +98,10 @@ class MessageTests(unittest.TestCase):
         self.assertEqual(1, message.count("摘要依据：标题和简介"))
         self.assertEqual(1, message.count("置信度：低，仅基于标题和简介"))
         self.assertNotIn("**", message)
+
+
+class SummaryLabelTests(unittest.TestCase):
+    def test_generic_theme_labels_and_exact_duplicates_are_removed(self):
+        from youtube_daily_update.messages import sanitize_summary_text
+        self.assertEqual("- 主旨：介绍工具\n- 支持本地部署。\n- 成本：按用量计费。",
+                         sanitize_summary_text("- 主旨：介绍工具\n- 主题：支持本地部署。\n- 主题：支持本地部署。\n- 成本：按用量计费。"))

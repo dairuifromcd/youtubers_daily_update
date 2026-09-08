@@ -42,9 +42,9 @@ def build_summary_prompt(video: Video, transcript: TranscriptResult, max_chars: 
         要求：
         - 只依据输入内容总结，不要编造未提供的信息。
         - 输出必须是简体中文。
-        - 输出约 1000-1500 字的中文摘要；内容简单时可以更短，不要凑字数。
-        - 第一条用“主旨：”概括视频，随后按主题写 4-7 条要点，每条用“- ”开头。
-        - 每个主题用“主题：解释”的形式，结合必要论据、具体数字、时间节点和因果关系。
+        - 输出约 600-900 字的中文摘要；内容简单时可以更短，不要凑字数。
+        - 只在第一条用“主旨：”概括整个视频，随后写 3-5 条核心要点，每条用“- ”开头。
+        - 要点直接陈述内容，不要使用“主题：”等通用标签，也不要把同一观点拆成多个主题。每条最多 2-3 句，保留关键论据、数字和因果关系。
         - 均衡覆盖整个视频的主要主题，不要遗漏后半段；不要只堆砌个股、机构评级或细枝末节。
         - 保留重要预测的条件与先后顺序，明确标注“作者认为/预测”，不要将观点写成确定事实。
         - 省略开户福利、优惠码、广告、重复口号和无关闲聊；不要反复套用“核心观点/论据/因果关系”等标签。
@@ -153,7 +153,9 @@ def sanitize_summary_text(summary: str) -> str:
         line = re.sub(r"`([^`]+)`", r"\1", line)
         if not line.startswith("- "):
             line = "- " + line.lstrip("- ").strip()
-        lines.append(line)
+        line = re.sub(r"^- 主题\s*[：:]\s*", "- ", line)
+        if line not in lines and line != "- ":
+            lines.append(line)
     return "\n".join(lines).strip()
 
 

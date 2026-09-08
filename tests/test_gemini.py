@@ -59,6 +59,18 @@ class GeminiProviderTests(unittest.TestCase):
                         GeminiProvider("test-key").generate("总结")
                     self.assertEqual(1, request.call_count)
 
+    def test_read_timeout_retries_and_remains_bounded(self):
+        data = {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": "中文摘要"}]}}]}
+        provider = GeminiProvider("test-key", fallback_models=(), max_attempts=2, sleep_fn=lambda _: None)
+        with patch("youtube_daily_update.providers.gemini.urlopen",
+                   side_effect=[TimeoutError("read timed out"), io.BytesIO(json.dumps(data).encode())]) as request:
+            self.assertEqual("中文摘要", provider.generate("总结"))
+            self.assertEqual(2, request.call_count)
+        with patch("youtube_daily_update.providers.gemini.urlopen", side_effect=TimeoutError) as request:
+            with self.assertRaises(ProviderError):
+                provider.generate("总结")
+            self.assertEqual(2, request.call_count)
+
     def test_retries_transient_503(self):
         provider = StubGeminiProvider(failures_before_success=1)
 
