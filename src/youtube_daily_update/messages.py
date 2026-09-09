@@ -43,7 +43,7 @@ def build_summary_prompt(video: Video, transcript: TranscriptResult, max_chars: 
         - 只依据输入内容总结，不要编造未提供的信息。
         - 输出必须是简体中文。
         - 输出约 600-900 字的中文摘要；内容简单时可以更短，不要凑字数。
-        - 只在第一条用“主旨：”概括整个视频，随后写 3-5 条核心要点，每条用“- ”开头。
+        - 只在第一条用“主旨：”概括整个视频，限 1-2 句、约 40-80 字，只写核心问题与结论，不罗列细节。随后写 3-5 条核心要点，每条用“- ”开头，补充论据，不重复主旨。
         - 要点直接陈述内容，不要使用“主题：”等通用标签，也不要把同一观点拆成多个主题。每条最多 2-3 句，保留关键论据、数字和因果关系。
         - 均衡覆盖整个视频的主要主题，不要遗漏后半段；不要只堆砌个股、机构评级或细枝末节。
         - 保留重要预测的条件与先后顺序，明确标注“作者认为/预测”，不要将观点写成确定事实。
@@ -120,11 +120,6 @@ def split_telegram_messages(entries: list[str], max_chars: int = SAFE_TELEGRAM_M
 
 def _format_entry(index: int, digest: VideoDigest) -> str:
     local_time = digest.video.published_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    confidence_line = (
-        "置信度：低，仅基于标题和简介"
-        if digest.low_confidence
-        else "置信度：基于可用内容"
-    )
     summary = sanitize_summary_text(digest.summary)
     return (
         f"{index}. {digest.video.title}\n"
@@ -132,7 +127,6 @@ def _format_entry(index: int, digest: VideoDigest) -> str:
         f"发布时间：{local_time}\n"
         f"链接：{digest.video.url}\n"
         f"摘要依据：{digest.basis}\n"
-        f"{confidence_line}\n"
         f"{summary}"
     )
 

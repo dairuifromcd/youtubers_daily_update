@@ -96,7 +96,7 @@ class MessageTests(unittest.TestCase):
         message = messages[0]
 
         self.assertEqual(1, message.count("摘要依据：标题和简介"))
-        self.assertEqual(1, message.count("置信度：低，仅基于标题和简介"))
+        self.assertNotIn("置信度：", message)
         self.assertNotIn("**", message)
 
 

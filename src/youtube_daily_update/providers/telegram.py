@@ -27,14 +27,27 @@ class TelegramNotifier:
         self.max_attempts = max_attempts
 
     def send_messages(self, messages: list[str]) -> None:
+        sent_covers: set[str] = set()
         for message in messages:
-            self._send_with_retry(message)
+            video_link = re.search(r"^链接：(https://www\.youtube\.com/watch\?v=([\w-]+))$", message, re.MULTILINE)
+            if video_link and video_link.group(2) not in sent_covers:
+                video_id = video_link.group(2)
+                self._send_with_retry("sendPhoto", {
+                    "photo": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+                    "reply_markup": {"inline_keyboard": [[{
+                        "text": "观看视频", "url": video_link.group(1),
+                    }]]},
+                })
+                sent_covers.add(video_id)
+            self._send_with_retry("sendMessage", {
+                "text": message, "link_preview_options": {"is_disabled": True},
+            })
 
-    def _send_with_retry(self, message: str) -> None:
+    def _send_with_retry(self, method: str, payload: dict) -> None:
         last_error: Exception | None = None
         for attempt in range(1, self.max_attempts + 1):
             try:
-                self._send_once(message)
+                self._send_once(method, payload)
                 return
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
@@ -42,18 +55,9 @@ class TelegramNotifier:
                     time.sleep(min(2**attempt, 10))
         raise ProviderError(f"Telegram send failed after {self.max_attempts} attempts: {last_error}")
 
-    def _send_once(self, message: str) -> None:
-        url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
-        payload = {
-            "chat_id": self.chat_id,
-            "text": message,
-        }
-        video_link = re.search(r"^链接：(https://www\.youtube\.com/watch\?v=[\w-]+)$", message, re.MULTILINE)
-        payload["link_preview_options"] = (
-            {"is_disabled": False, "url": video_link.group(1),
-             "prefer_large_media": True, "show_above_text": True}
-            if video_link else {"is_disabled": True}
-        )
+    def _send_once(self, method: str, payload: dict) -> None:
+        url = f"https://api.telegram.org/bot{self.bot_token}/{method}"
+        payload = {"chat_id": self.chat_id, **payload}
         request = Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
