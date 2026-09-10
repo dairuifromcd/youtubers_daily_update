@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 import textwrap
 from datetime import timezone
+from zoneinfo import ZoneInfo
 
-from .models import TranscriptResult, Video, VideoDigest
+from .models import BRISBANE_TZ_NAME, TranscriptResult, Video, VideoDigest
 
 
 TELEGRAM_MAX_CHARS = 4096
@@ -119,14 +120,15 @@ def split_telegram_messages(entries: list[str], max_chars: int = SAFE_TELEGRAM_M
 
 
 def _format_entry(index: int, digest: VideoDigest) -> str:
-    local_time = digest.video.published_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    summary = sanitize_summary_text(digest.summary)
+    local_time = digest.video.published_at.astimezone(ZoneInfo(BRISBANE_TZ_NAME)).strftime("%Y-%m-%d %H:%M 布里斯班")
+    summary = sanitize_summary_text(digest.summary).replace("\n- ", "\n\n- ")
+    basis = "视频内容" if digest.basis == "视频内容（Gemini直接读取）" else digest.basis
     return (
         f"{index}. {digest.video.title}\n"
         f"频道：{digest.video.channel_name}\n"
         f"发布时间：{local_time}\n"
         f"链接：{digest.video.url}\n"
-        f"摘要依据：{digest.basis}\n"
+        f"来源：{basis}\n\n"
         f"{summary}"
     )
 

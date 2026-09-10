@@ -84,6 +84,15 @@ class MessageTests(unittest.TestCase):
         self.assertIn("- AI供应链：节目讨论了供应链问题。", summary)
         self.assertIn("- 第二个重点。", summary)
 
+    def test_readable_spacing_source_and_brisbane_date_rollover(self):
+        video = replace(sample_video(), published_at=datetime(2026, 9, 9, 16, 30, tzinfo=timezone.utc))
+        message = format_digest_messages([VideoDigest(
+            video, "- 主旨：测试。\n- 第一要点。\n- 第二要点。", "视频内容（Gemini直接读取）"
+        )])[0]
+        self.assertIn("发布时间：2026-09-10 02:30 布里斯班", message)
+        self.assertIn("来源：视频内容\n\n- 主旨：测试。\n\n- 第一要点。\n\n- 第二要点。", message)
+        self.assertNotIn("Gemini", message)
+
     def test_format_digest_outputs_metadata_once(self):
         digest = VideoDigest(
             video=sample_video(),
@@ -95,7 +104,7 @@ class MessageTests(unittest.TestCase):
         messages = format_digest_messages([digest])
         message = messages[0]
 
-        self.assertEqual(1, message.count("摘要依据：标题和简介"))
+        self.assertEqual(1, message.count("来源：标题和简介"))
         self.assertNotIn("置信度：", message)
         self.assertNotIn("**", message)
 
